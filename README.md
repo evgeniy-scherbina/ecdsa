@@ -27,4 +27,4 @@ signatureHex: 304402205910dde4e5bf8638790b09a66a29082b969bb15877bc58947ab36f076c
 `BitcoinAddress + MerchantId + NtfnUrl + NtfnUrlForForwardPayment + NtfnUrlForOnChainPayment` without any separators
 
 ### Message Hashing Before Signing
-under the hood we use ripemd160(sha256(message)) for message hashing like bitcoin does
+under the hood we use `ripemd160(sha256(message))` for message hashing like bitcoin does
