@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -45,6 +46,10 @@ var (
 			cli.StringFlag{
 				Name: "message",
 			},
+			cli.BoolFlag{
+				Name:  "sha256",
+				Usage: "use sha256 as hash function (default is ripemd160(sha256(b)))",
+			},
 		},
 		Action: sign,
 	}
@@ -82,7 +87,13 @@ func sign(ctx *cli.Context) error {
 	fmt.Printf(tmpl, string(privKeyHex), pubKeyHex)
 
 	message := []byte(ctx.String("message"))
-	messageHash := btcutil.Hash160(message)
+	var messageHash []byte
+	if ctx.Bool("sha256") {
+		rez := sha256.Sum256(message)
+		messageHash = rez[:]
+	} else {
+		messageHash = btcutil.Hash160(message)
+	}
 
 	signature, err := privKey.Sign(messageHash)
 	if err != nil {
