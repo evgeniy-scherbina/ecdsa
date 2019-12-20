@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -52,6 +53,25 @@ var (
 			},
 		},
 		Action: sign,
+	}
+	verifyCmd = cli.Command{
+		Name:  "verify",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "public_key",
+			},
+			cli.StringFlag{
+				Name: "message",
+			},
+			cli.StringFlag{
+				Name: "signature",
+			},
+			cli.BoolFlag{
+				Name:  "sha256",
+				Usage: "use sha256 as hash function (default is ripemd160(sha256(b)))",
+			},
+		},
+		Action: verify,
 	}
 )
 
@@ -106,6 +126,42 @@ func sign(ctx *cli.Context) error {
 	return nil
 }
 
+func verify(ctx *cli.Context) error {
+	publicKeyHex := ctx.String("public_key")
+	publicKeyRaw, err := hex.DecodeString(publicKeyHex)
+	if err != nil {
+		return err
+	}
+	publicKey, err := btcec.ParsePubKey(publicKeyRaw, btcec.S256())
+	if err != nil {
+		return err
+	}
+
+	message := []byte(ctx.String("message"))
+	var messageHash []byte
+	if ctx.Bool("sha256") {
+		rez := sha256.Sum256(message)
+		messageHash = rez[:]
+	} else {
+		messageHash = btcutil.Hash160(message)
+	}
+
+	signatureHex := ctx.String("signature")
+	signatureRaw, err := hex.DecodeString(signatureHex)
+	if err != nil {
+		return err
+	}
+	signature , err := btcec.ParseDERSignature(signatureRaw, btcec.S256())
+	if err != nil {
+		return err
+	}
+
+	if !signature.Verify(messageHash, publicKey) {
+		return errors.New("invalid signature")
+	}
+	return nil
+}
+
 func main() {
 	app := cli.NewApp()
 
@@ -116,6 +172,7 @@ func main() {
 	app.Commands = []cli.Command{
 		genKeysCmd,
 		signCmd,
+		verifyCmd,
 	}
 
 	if err := app.Run(os.Args); err != nil {
